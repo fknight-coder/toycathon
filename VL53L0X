@@ -1,0 +1,40 @@
+#include <Wire.h>
+#include <VL53L0X.h>
+
+VL53L0X sensor;
+
+void setup()
+{
+  Serial.begin(115200);
+  Wire.begin();   // Nano I2C
+
+  sensor.setTimeout(500);
+
+  if (!sensor.init())
+  {
+    Serial.println("Sensor not detected!");
+    while (1);
+  }
+
+  Serial.println("VL53L0X Ready");
+
+  // Better precision (good for robotics)
+  sensor.setMeasurementTimingBudget(200000);
+
+  sensor.startContinuous();
+}
+
+void loop()
+{
+  uint16_t distance = sensor.readRangeContinuousMillimeters();
+
+  if (sensor.timeoutOccurred()) {
+    Serial.println("Timeout!");
+  } else {
+    Serial.print("Distance: ");
+    Serial.print(distance);
+    Serial.println(" mm");
+  }
+
+  delay(100);
+}
