@@ -1,0 +1,69 @@
+// -------- MOTOR PINS --------
+#define AIN1 4
+#define AIN2 3
+#define BIN1 6
+#define BIN2 7
+#define STBY 5
+#define PWMA 9
+#define PWMB 10
+
+void setup() {
+
+  pinMode(AIN1, OUTPUT);
+  pinMode(AIN2, OUTPUT);
+  pinMode(BIN1, OUTPUT);
+  pinMode(BIN2, OUTPUT);
+  pinMode(PWMA, OUTPUT);
+  pinMode(PWMB, OUTPUT);
+  pinMode(STBY, OUTPUT);
+
+  digitalWrite(STBY, HIGH);  // Enable driver
+}
+
+void loop() {
+
+  // -------- FORWARD --------
+  moveForward(150);
+  delay(2000);
+
+  // -------- STOP --------
+  stopMotors();
+  delay(1000);
+
+  // -------- BACKWARD --------
+  moveBackward(150);
+  delay(2000);
+
+  // -------- STOP --------
+  stopMotors();
+  delay(2000);
+}
+
+// -------- FUNCTIONS --------
+
+void moveForward(int speedVal) {
+  digitalWrite(AIN1, HIGH);
+  digitalWrite(AIN2, LOW);
+  analogWrite(PWMA, speedVal);
+
+  digitalWrite(BIN1, HIGH);
+  digitalWrite(BIN2, LOW);
+  analogWrite(PWMB, speedVal);
+}
+
+void moveBackward(int speedVal) {
+  digitalWrite(AIN1, LOW);
+  digitalWrite(AIN2, HIGH);
+  analogWrite(PWMA, speedVal);
+
+  digitalWrite(BIN1, LOW);
+  digitalWrite(BIN2, HIGH);
+  analogWrite(PWMB, speedVal);
+}
+
+void stopMotors() {
+  analogWrite(PWMA, 0);
+  analogWrite(PWMB, 0);
+}
+
+
