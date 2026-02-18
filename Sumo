@@ -1,0 +1,90 @@
+#include <Wire.h>
+#include <VL53L0X.h>
+
+VL53L0X sensor;
+
+// ---- Motor Pins ----
+#define AIN1 4
+#define AIN2 3
+#define BIN1 6
+#define BIN2 7
+#define STBY 5
+#define PWMA 9
+#define PWMB 10
+
+// ---- Settings ----
+#define ATTACK_DISTANCE 300   // mm
+#define SEARCH_SPEED 130
+#define ATTACK_SPEED 255
+
+void setup() {
+  Serial.begin(115200);
+  Wire.begin();
+
+  // Motor setup
+  pinMode(AIN1, OUTPUT);
+  pinMode(AIN2, OUTPUT);
+  pinMode(BIN1, OUTPUT);
+  pinMode(BIN2, OUTPUT);
+  pinMode(PWMA, OUTPUT);
+  pinMode(PWMB, OUTPUT);
+  pinMode(STBY, OUTPUT);
+
+  digitalWrite(STBY, HIGH); // Enable driver
+
+  // Sensor setup
+  sensor.setTimeout(200);
+
+  if (!sensor.init()) {
+    Serial.println("VL53L0X not detected");
+    while (1);
+  }
+
+  sensor.setMeasurementTimingBudget(20000); // 20ms fast mode
+  sensor.startContinuous();
+}
+
+void loop() {
+
+  uint16_t distance = sensor.readRangeContinuousMillimeters();
+
+  if (sensor.timeoutOccurred()) return;
+
+  Serial.println(distance);
+
+  if (distance < ATTACK_DISTANCE && distance > 50) {
+    attack();
+  } else {
+    search();
+  }
+}
+
+// ----------- MOVEMENT FUNCTIONS ------------
+
+void attack() {
+  moveForward(ATTACK_SPEED);
+}
+
+void search() {
+  rotateRight(SEARCH_SPEED);
+}
+
+void moveForward(int speedVal) {
+  digitalWrite(AIN1, HIGH);
+  digitalWrite(AIN2, LOW);
+  analogWrite(PWMA, speedVal);
+
+  digitalWrite(BIN1, HIGH);
+  digitalWrite(BIN2, LOW);
+  analogWrite(PWMB, speedVal);
+}
+
+void rotateRight(int speedVal) {
+  digitalWrite(AIN1, HIGH);
+  digitalWrite(AIN2, LOW);
+  analogWrite(PWMA, speedVal);
+
+  digitalWrite(BIN1, LOW);
+  digitalWrite(BIN2, HIGH);
+  analogWrite(PWMB, speedVal);
+}
