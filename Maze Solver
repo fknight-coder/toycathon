@@ -1,0 +1,135 @@
+// ---------- LEFT SENSOR ----------
+#define TRIG_L 2
+#define ECHO_L 8
+
+// ---------- FRONT SENSOR ----------
+#define TRIG_F 12
+#define ECHO_F 13
+
+// ---------- RIGHT SENSOR ----------
+#define TRIG_R A0
+#define ECHO_R A1
+
+// ---------- MOTOR PINS ----------
+#define AIN1 4
+#define AIN2 3
+#define BIN1 6
+#define BIN2 7
+#define STBY 5
+#define PWMA 9
+#define PWMB 10
+
+#define SPEED 150
+#define WALL_DISTANCE 20   // cm threshold
+
+// -------- Distance Function --------
+long getDistance(int trigPin, int echoPin) {
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  long duration = pulseIn(echoPin, HIGH, 30000);
+  long distance = duration * 0.034 / 2;
+  return distance;
+}
+
+void setup() {
+
+  pinMode(TRIG_L, OUTPUT);
+  pinMode(ECHO_L, INPUT);
+
+  pinMode(TRIG_F, OUTPUT);
+  pinMode(ECHO_F, INPUT);
+
+  pinMode(TRIG_R, OUTPUT);
+  pinMode(ECHO_R, INPUT);
+
+  pinMode(AIN1, OUTPUT);
+  pinMode(AIN2, OUTPUT);
+  pinMode(BIN1, OUTPUT);
+  pinMode(BIN2, OUTPUT);
+  pinMode(PWMA, OUTPUT);
+  pinMode(PWMB, OUTPUT);
+  pinMode(STBY, OUTPUT);
+
+  digitalWrite(STBY, HIGH);
+
+  Serial.begin(115200);
+}
+
+void loop() {
+
+  long leftDist  = getDistance(TRIG_L, ECHO_L);
+  long frontDist = getDistance(TRIG_F, ECHO_F);
+  long rightDist = getDistance(TRIG_R, ECHO_R);
+
+  Serial.print("L:");
+  Serial.print(leftDist);
+  Serial.print(" F:");
+  Serial.print(frontDist);
+  Serial.print(" R:");
+  Serial.println(rightDist);
+
+  if (leftDist > WALL_DISTANCE) {
+    turnLeft();
+    delay(350);
+  }
+  else if (frontDist > WALL_DISTANCE) {
+    moveForward();
+  }
+  else if (rightDist > WALL_DISTANCE) {
+    turnRight();
+    delay(350);
+  }
+  else {
+    uTurn();
+    delay(600);
+  }
+
+  delay(100);
+}
+
+// -------- MOTOR FUNCTIONS --------
+
+void moveForward() {
+  digitalWrite(AIN1, HIGH);
+  digitalWrite(AIN2, LOW);
+  analogWrite(PWMA, SPEED);
+
+  digitalWrite(BIN1, HIGH);
+  digitalWrite(BIN2, LOW);
+  analogWrite(PWMB, SPEED);
+}
+
+void turnLeft() {
+  digitalWrite(AIN1, LOW);
+  digitalWrite(AIN2, HIGH);
+  analogWrite(PWMA, SPEED);
+
+  digitalWrite(BIN1, HIGH);
+  digitalWrite(BIN2, LOW);
+  analogWrite(PWMB, SPEED);
+}
+
+void turnRight() {
+  digitalWrite(AIN1, HIGH);
+  digitalWrite(AIN2, LOW);
+  analogWrite(PWMA, SPEED);
+
+  digitalWrite(BIN1, LOW);
+  digitalWrite(BIN2, HIGH);
+  analogWrite(PWMB, SPEED);
+}
+
+void uTurn() {
+  digitalWrite(AIN1, HIGH);
+  digitalWrite(AIN2, LOW);
+  analogWrite(PWMA, SPEED);
+
+  digitalWrite(BIN1, LOW);
+  digitalWrite(BIN2, HIGH);
+  analogWrite(PWMB, SPEED);
+}
