@@ -12,16 +12,20 @@ VL53L0X sensor;
 #define PWMA 9
 #define PWMB 10
 
+// ---- Edge Sensors ----
+#define LEFT_EDGE 2
+#define RIGHT_EDGE 8
+
 // ---- Settings ----
-#define ATTACK_DISTANCE 300   // mm
-#define SEARCH_SPEED 130
+#define ATTACK_DISTANCE 300
+#define SEARCH_SPEED 140
 #define ATTACK_SPEED 255
+#define ESCAPE_SPEED 180
 
 void setup() {
   Serial.begin(115200);
   Wire.begin();
 
-  // Motor setup
   pinMode(AIN1, OUTPUT);
   pinMode(AIN2, OUTPUT);
   pinMode(BIN1, OUTPUT);
@@ -30,27 +34,36 @@ void setup() {
   pinMode(PWMB, OUTPUT);
   pinMode(STBY, OUTPUT);
 
-  digitalWrite(STBY, HIGH); // Enable driver
+  pinMode(LEFT_EDGE, INPUT);
+  pinMode(RIGHT_EDGE, INPUT);
 
-  // Sensor setup
+  digitalWrite(STBY, HIGH);
+
   sensor.setTimeout(200);
-
   if (!sensor.init()) {
-    Serial.println("VL53L0X not detected");
     while (1);
   }
 
-  sensor.setMeasurementTimingBudget(20000); // 20ms fast mode
+  sensor.setMeasurementTimingBudget(20000);
   sensor.startContinuous();
 }
 
 void loop() {
 
+  // ----- EDGE PROTECTION (HIGHEST PRIORITY) -----
+  if (digitalRead(LEFT_EDGE) == HIGH) {
+    escapeRight();
+    return;
+  }
+
+  if (digitalRead(RIGHT_EDGE) == HIGH) {
+    escapeLeft();
+    return;
+  }
+
+  // ----- ENEMY DETECTION -----
   uint16_t distance = sensor.readRangeContinuousMillimeters();
-
   if (sensor.timeoutOccurred()) return;
-
-  Serial.println(distance);
 
   if (distance < ATTACK_DISTANCE && distance > 50) {
     attack();
@@ -59,7 +72,7 @@ void loop() {
   }
 }
 
-// ----------- MOVEMENT FUNCTIONS ------------
+// -------- MOVEMENTS --------
 
 void attack() {
   moveForward(ATTACK_SPEED);
@@ -67,6 +80,20 @@ void attack() {
 
 void search() {
   rotateRight(SEARCH_SPEED);
+}
+
+void escapeLeft() {
+  moveBackward(ESCAPE_SPEED);
+  delay(250);
+  rotateLeft(ESCAPE_SPEED);
+  delay(300);
+}
+
+void escapeRight() {
+  moveBackward(ESCAPE_SPEED);
+  delay(250);
+  rotateRight(ESCAPE_SPEED);
+  delay(300);
 }
 
 void moveForward(int speedVal) {
@@ -79,6 +106,16 @@ void moveForward(int speedVal) {
   analogWrite(PWMB, speedVal);
 }
 
+void moveBackward(int speedVal) {
+  digitalWrite(AIN1, LOW);
+  digitalWrite(AIN2, HIGH);
+  analogWrite(PWMA, speedVal);
+
+  digitalWrite(BIN1, LOW);
+  digitalWrite(BIN2, HIGH);
+  analogWrite(PWMB, speedVal);
+}
+
 void rotateRight(int speedVal) {
   digitalWrite(AIN1, HIGH);
   digitalWrite(AIN2, LOW);
@@ -88,3 +125,14 @@ void rotateRight(int speedVal) {
   digitalWrite(BIN2, HIGH);
   analogWrite(PWMB, speedVal);
 }
+
+void rotateLeft(int speedVal) {
+  digitalWrite(AIN1, LOW);
+  digitalWrite(AIN2, HIGH);
+  analogWrite(PWMA, speedVal);
+
+  digitalWrite(BIN1, HIGH);
+  digitalWrite(BIN2, LOW);
+  analogWrite(PWMB, speedVal);
+}
+
