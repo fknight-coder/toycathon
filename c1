@@ -1,0 +1,175 @@
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+#include <Adafruit_NeoPixel.h>
+
+LiquidCrystal_I2C lcd(0x27, 20, 4);
+
+// 🔹 THREE SEPARATE STRIPS
+#define LED_PIN_1 5
+#define LED_PIN_2 18
+#define LED_PIN_3 19
+
+#define NUM_LEDS 3
+
+Adafruit_NeoPixel strip1(NUM_LEDS, LED_PIN_2, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel strip2(NUM_LEDS, LED_PIN_2, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel strip3(NUM_LEDS, LED_PIN_3, NEO_GRB + NEO_KHZ800);
+
+// Player pins
+int p1_solar = 34, p1_wind = 35, p1_hydro = 32;
+int p2_solar = 33, p2_wind = 25, p2_hydro = 26;
+int p3_solar = 27, p3_wind = 14, p3_hydro = 12;
+
+float sunFactor, windFactor, hydroFactor;
+int demand;
+int tolerance = 5;
+
+unsigned long startTime;
+int gameTime = 60000;
+
+String sunText, windText, hydroText;
+
+void setup() {
+  lcd.init();
+  lcd.backlight();
+
+  strip1.begin();
+  strip2.begin();
+  strip3.begin();
+
+  strip1.show();
+  strip2.show();
+  strip3.show();
+
+  randomSeed(analogRead(0));
+  strip1.fill(strip1.Color(255,0,0)); // Red
+strip1.show();
+delay(1000);
+
+strip1.fill(strip1.Color(0,255,0)); // Green
+strip1.show();
+delay(1000);
+
+strip1.fill(strip1.Color(0,0,255)); // Blue
+strip1.show();
+delay(1000);
+}
+
+void loop() {
+
+  demand = random(60, 120);
+
+  int sun = random(0,3);
+  int wind = random(0,3);
+  int hydro = random(0,3);
+
+  sunFactor = sun + 1;
+  windFactor = wind + 1;
+  hydroFactor = hydro + 1;
+
+  sunText = (sun==0)?"Cloudy":(sun==1)?"Normal":"Sunny";
+  windText = (wind==0)?"Low":(wind==1)?"Med":"Strong";
+  hydroText = (hydro==0)?"Low":(hydro==1)?"Normal":"High";
+
+  // 🔹 Show weather
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Demand:");
+  lcd.print(demand);
+
+  lcd.setCursor(0,1);
+  lcd.print("Sun:");
+  lcd.print(sunText);
+
+  lcd.setCursor(0,2);
+  lcd.print("Wind:");
+  lcd.print(windText);
+
+  lcd.setCursor(0,3);
+  lcd.print("Hydro:");
+  lcd.print(hydroText);
+
+  delay(3000);
+
+  startTime = millis();
+  int winner = 0;
+
+  while(millis() - startTime < gameTime) {
+
+    int p1 = readPlayer(p1_solar, p1_wind, p1_hydro);
+    int p2 = readPlayer(p2_solar, p2_wind, p2_hydro);
+    int p3 = readPlayer(p3_solar, p3_wind, p3_hydro);
+
+    int d1 = abs(p1 - demand);
+    int d2 = abs(p2 - demand);
+    int d3 = abs(p3 - demand);
+
+    // 🔹 SET COLORS
+    setStrip(strip1, getColor(d1));
+    setStrip(strip2, getColor(d2));
+    setStrip(strip3, getColor(d3));
+
+    // 🔹 SHOW
+    strip1.show();
+    strip2.show();
+    strip3.show();
+
+    // 🔹 LCD
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("A:");
+    lcd.print(p1);
+    lcd.print(" B:");
+    lcd.print(p2);
+
+    lcd.setCursor(0,1);
+    lcd.print("C:");
+    lcd.print(p3);
+
+    lcd.setCursor(0,2);
+    lcd.print("D:");
+    lcd.print(demand);
+
+    // 🔹 BLINK TIMER ONLY
+    lcd.setCursor(0,3);
+    lcd.print("Time:");
+    lcd.print((gameTime - (millis() - startTime))/1000);
+
+    delay(200);
+    lcd.setCursor(0,3);
+    lcd.print("           ");
+
+    if(d1 <= tolerance) { winner = 1; break; }
+    if(d2 <= tolerance) { winner = 2; break; }
+    if(d3 <= tolerance) { winner = 3; break; }
+  }
+
+  lcd.clear();
+  lcd.setCursor(0,1);
+  lcd.print("Winner: P");
+  lcd.print(winner);
+
+  delay(4000);
+}
+
+
+// 🔧 FUNCTIONS
+
+int readPlayer(int s, int w, int h) {
+  return map(analogRead(s),0,4095,0,30)*sunFactor +
+         map(analogRead(w),0,4095,0,30)*windFactor +
+         map(analogRead(h),0,4095,0,30)*hydroFactor;
+}
+
+uint32_t getColor(int diff) {
+  if(diff <= tolerance) return strip1.Color(0,255,0);
+  else if(diff <= 10) return strip1.Color(255,150,0);
+  else return strip1.Color(255,0,0);
+}
+
+// Set full strip color
+void setStrip(Adafruit_NeoPixel &strip, uint32_t color) {
+  for(int i=0;i<3;i++) {
+    strip.setPixelColor(i, color);
+  }
+}
